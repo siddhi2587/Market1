@@ -1,0 +1,505 @@
+
+ASSIGNMENT 3
+SET A
+
+1) 1st instance->(Debian)->select operating system(debian)->create key pair(debian-key.pem)->launch
+2nd instance->>(Red-Hat)->select operating system(debian)->create key pair(rhel-key.pem)->launch
+
+
+then open terminal-> ssh -i ~/Debian-VM.pem admin@<public ip>
+new terminal->ssh -i ~/rhel-key.pem ec2-user@16.171.172.119
+
+2)Create a project folder containing an ansible.cfg file and an inventory file. The inventory
+file should contain the details for two managed nodes. Then, establish and test the
+connection between the Ansible control node and the two managed nodes.
+ANSWER=>
+mkdir -p ~/ansible_project
+cd ~/ansible_project
+nano ansible.cfg
+paste->
+"
+[defaults]
+inventory = ./inventory
+remote_user = oem       # Replace 'oem' with your Linux username
+host_key_checking = False
+retry_files_enabled = False
+"
+nano inventory
+paste->"
+[managed_nodes]
+127.0.0.1
+127.0.0.1"
+
+ansible all -m ping -u oem --connection=local
+
+3.​ Run following ad-hoc command:
+I.​Install apache2 on a Debian system using an Ansible ad-hoc command.
+ANSWER=>
+cd ~/ansible_project
+mkdir -p playbooks
+nano playbooks/apache.yml
+
+---
+- name: Install and configure Apache2
+  hosts: all
+  become: yes
+
+  tasks:
+    - name: Update apt cache
+      apt:
+        update_cache: yes
+
+    - name: Install Apache2
+      apt:
+        name: apache2
+        state: present
+
+    - name: Ensure /var/log/apache2 exists
+      file:
+        path: /var/log/apache2
+        state: directory
+        owner: syslog
+        group: adm
+        mode: '0750'
+
+    - name: Set ServerName to localhost
+      copy:
+        content: "ServerName localhost\n"
+        dest: /etc/apache2/conf-available/servername.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: Enable servername configuration
+      shell: a2enconf servername
+      args:
+        warn: false
+      register: servername_conf
+      changed_when: "'enabled' in servername_conf.stdout"
+
+    - name: Ensure Apache2 service is started and enabled
+      service:
+        name: apache2
+        state: started
+        enabled: yes
+
+    - name: Reload Apache if configuration changed
+      service:
+        name: apache2
+        state: reloaded
+      when: servername_conf is changed
+->sudo -l
+->sudo whoami
+->sudo visudo
+->ansible-playbook playbooks/apache.yml -u $USER --connection=local
+->sudo systemctl status apache2
+->curl http://127.0.0.1
+
+ii)Install httpd on RedHat system using an Ansible ad-hoc command.
+ANSWER=>
+sudo visudo->enter password->
+->ansible localhost -m ansible.builtin.apt \
+  -a "name=apache2 state=present update_cache=yes" \
+  -u oem --connection=local --become
+
+-> ansible localhost -m ansible.builtin.service \
+   -a "name=apache2 state=started enabled=yes" \
+  -u oem --connection=local --become
+
+->curl http://127.0.0.1
+
+III.​
+Demonstrate at least one use case of ansible.builtin.copy module using adhoc
+command.
+ANSWER=>mkdir -p ~/ansible_project/playbooks
+-> cd ~/ansible_project
+->echo "Hello — deployed by Ansible copy module (Case A)" > /tmp/index.html
+->cat /tmp/index.html
+->ansible localhost -m ansible.builtin.copy \
+  -a "src=/tmp/index.html dest=/var/www/html/index.html owner=root group=root mode=0644 backup=yes" \
+  --connection=local -u oem --become
+->sudo ls -l /var/www/html/index.html
+sudo cat /var/www/html/index.html
+->curl -s http://127.0.0.1 | head -n 10
+Case B
+->ansible localhost -m ansible.builtin.copy \
+  -a "content='Hello — created by Ansible copy content parameter (Case B)\n' dest=/var/www/html/index2.html owner=root group=root mode=0644 backup=yes" \
+  --connection=local -u oem --become
+->sudo ls -l /var/www/html/index2.html
+sudo cat /var/www/html/index2.html
+curl -s http://127.0.0.1/index2.html | head -n 10
+
+IV.​
+Demonstrate at least one use case of ansible.builtin.file module using adhoc
+command.
+ANSWER=>
+->ansible localhost -m ansible.builtin.file \
+  -a "path=/tmp/ansible_demo_dir state=directory mode=0755" \
+  --connection=local --become
+->ls -ld /tmp/ansible_demo_dir
+
+V.​Demonstrate at least one use case of copy module using adhoc command
+ANSWER=>
+->echo "This is a demo file copied by Ansible." > /tmp/source.txt
+->ansible localhost -m ansible.builtin.copy \
+  -a "src=/tmp/source.txt dest=/tmp/destination.txt mode=0644" \
+  --connection=local --become
+->cat /tmp/destination.txt
+
+VI)Demonstrate at least one use case of ansible.builtin.service module using adhoc
+command.
+ANSWER=>
+->sudo apt install apache2 -y
+->ansible localhost -m ansible.builtin.service \
+  -a "name=apache2 state=started enabled=yes" \
+  --connection=local --become
+->sudo systemctl status apache2
+
+VII)Demonstrate at least one use case of ansible.builtin.apt module using adhoc
+command.
+ANSWER=>
+->ansible localhost -m ansible.builtin.apt \
+  -a "update_cache=yes" \
+  --connection=local --become
+->ansible localhost -m ansible.builtin.apt \
+  -a "name=apache2 state=present update_cache=yes" \
+  --connection=local --become
+->apache2 -v
+->ii  apache2   2.4.xx-1ubuntu2.1   amd64   Apache HTTP Server
+
+IX)Demonstrate at least one use case of ansible.builtin.user module using adhoc
+command.
+ANSWER=>
+->ansible localhost -m ansible.builtin.user \
+  -a "name=devuser state=present" \
+  --connection=local --become
+->ansible localhost -m ansible.builtin.user \
+  -a "name=devuser state=absent" \
+  --connection=local --become
+->ansible localhost -m ansible.builtin.user \
+  -a "name=devuser state=present" \
+  --connection=local --become
+
+X.)​Demonstrate at least one use case of ansible.builtin.setup module using adhoc
+command.
+ANSWER=>
+->ansible localhost -m ansible.builtin.setup \
+  --connection=local
+->ansible localhost -m ansible.builtin.setup \
+  -a "filter=ansible_all_ipv4_addresses" \
+  --connection=local
+->ansible localhost -m ansible.builtin.setup --connection=local
+
+SET B
+1.)​ Launch two new virtual machine instances. The first & second should run an operating
+system from the Debian family, and the third should run one from the Red Hat family.
+ANSWER->create 3 instance VM1,VM2,and VM3 on aws->with oS debian,debian,Redhat->during this create new key pair and use same for all 3->connect throgh SSH->go to terminal type->
+and 2)​Create a project folder containing an ansible.cfg, inventory file and playbooks folder. The
+inventory file should contain the details for three managed nodes. Then, establish and test
+the connection between the Ansible control node and the two managed nodes.
+
+for debian tab
+-> cd ~/Music(music bcoz keypair is located there)
+->chmod 400 MyNewKey.pem
+->ssh -i MyNewKey.pem admin@<IP ADDRESS)(admin for debian instance and ec2-user for redhat)
+->cat /etc/os-release
+->sudo apt update
+->sudo apt install -y python3 python3-pip
+->sudo pip3 install --upgrade pip
+
+for redhat tab
+-> cd ~/Music(music bcoz keypair is located there)
+->chmod 400 MyNewKey.pem
+->ssh -i MyNewKey.pem admin@<IP ADDRESS)(admin for debian instance and ec2-user for redhat)
+->cat /etc/os-release
+->sudo alternatives --install /usr/bin/python python /usr/bin/python3 1
+->sudo yum install -y python3-pip
+->sudo pip3 install --upgrade pip
+
+
+on control tab(new terminal tab)
+->mkdir -p ~/ansible_project/playbooks
+->cd ~/ansible_project
+->nano ansible.cfg
+paste->[defaults]
+inventory = inventory
+host_key_checking = False
+
+->nano inventory
+paste->[debian_nodes]
+debian1 ansible_host=13.60.56.249 ansible_user=admin ansible_python_interpreter>
+
+[redhat_nodes]
+redhat1 ansible_host=13.60.156.14 ansible_user=ec2-user ansible_python_interpre>
+
+[all:vars]
+ansible_ssh_private_key_file=~/Music/MyNewKey.pem
+
+->ansible all -m ping
+->sudo apt update
+->sudo apt install -y python3 python3-pip python3-venv
+->cd ~/ansible_project
+->python3 -m venv venv_ansible
+->source venv_ansible/bin/activate
+->pip install --upgrade pip
+->pip install ansible
+-> cd ~/ansible_project
+->nano inventory
+->ansible all -i inventory -m ping
+->cd ~/ansible_project
+->source venv_ansible/bin/activate
+->ansible all -i inventory -a "df -h"
+
+3).​ Create an Ansible playbook to update the apt package manager, install Java, and display the
+installed Java version on all managed nodes
+->mkdir -p ~/ansible_project/playbooks
+->nano ~/ansible_project/playbooks/install_java.yml
+->paste
+  ---
+- name: Update package manager and install Java
+  hosts: all
+  become: yes
+  tasks:
+
+    - name: Update apt cache (Debian)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Update yum cache (RedHat)
+      yum:
+        update_cache: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Install Java (Debian)
+      apt:
+        name: openjdk-21-jdk
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Java (RedHat) - latest available OpenJDK
+      yum:
+        name: "{{ item }}"
+        state: present
+      loop:
+        - java-11-openjdk
+        - java-17-openjdk
+      register: java_install
+      ignore_errors: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Check Java version
+      command: java -version
+      register: java_version
+      ignore_errors: yes
+
+    - name: Display Java version
+      debug:
+        msg: "{{ java_version.stderr }}"
+
+->ansible-playbook -i inventory playbooks/install_java.yml
+
+
+4.)​ Create an Ansible playbook to install the Nginx web server and start the Nginx service on
+all managed nodes.
+
+->cd ~/ansible_project
+->source venv_ansible/bin/activate
+->ansible --version
+->mkdir -p ~/ansible_project/playbooks
+->nano ~/ansible_project/playbooks/install_nginx.yml
+paste->
+---
+- name: Install and start Nginx web server
+  hosts: all
+  become: yes
+  tasks:
+
+    - name: Update apt cache (Debian)
+      apt:
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Update yum cache (RedHat)
+      yum:
+        update_cache: yes
+      when: ansible_os_family == "RedHat"
+
+    - name: Install Nginx (Debian)
+      apt:
+        name: nginx
+        state: present
+      when: ansible_os_family == "Debian"
+
+    - name: Install Nginx (RedHat)
+      yum:
+        name: nginx
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Ensure Nginx service is started and enabled
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+->ansible all -i inventory -m ping
+->ansible-playbook -i inventory playbooks/install_nginx.yml
+->ansible all -i inventory -a "systemctl status nginx"
+
+5.​ Create an Ansible playbook to add multiple users on all managed nodes, ensuring that
+each user has a home directory
+
+->nano ~/ansible_project/playbooks/add_users.yml
+->paste
+---
+- name: Add multiple users with home directories
+  hosts: all
+  become: yes
+  vars:
+    users:
+      - alice
+      - bob
+      - charlie
+
+  tasks:
+    - name: Create users with home directories
+      ansible.builtin.user:
+        name: "{{ item }}"
+        state: present
+        create_home: yes
+      loop: "{{ users }}"
+      tags: create_users
+->ansible-playbook -i inventory playbooks/add_users.yml
+->ansible all -i inventory -a "ls -ld /home/alice"
+
+->ansible all -i inventory -a "grep alice /etc/passwd"
+
+Set C:
+1.​ Create an Ansible playbook to:
+I.​ Install the Nginx web server.
+II.​ Download sample project files (use: https://www.tooplate.com/) .
+III.​ Transfer all files to the web server's document root.
+IV.​
+Ensure that the project is accessible via the managed node's public IP address in a
+web browser.
+->cd ~/ansible_project/files
+->wget https://github.com/mdn/beginner-html-site/archive/refs/heads/main.zip -O sample_project.zip
+->nano ~/ansible_project/playbooks/install_nginx_and_download.yml
+paste->
+
+--
+- name: Install Nginx and Deploy Sample Project
+  hosts: all
+  become: yes
+
+  vars:
+    local_project_zip: "{{ playbook_dir }}/files/sample_project.zip"
+    remote_project_zip: "/tmp/sample_project.zip"
+    web_root: "/var/www/html"
+
+  tasks:
+
+    - name: Install Nginx on Debian
+      apt:
+        name: nginx
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install Nginx on RedHat
+      yum:
+        name: nginx
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Install unzip on Debian
+      apt:
+        name: unzip
+        state: present
+        update_cache: yes
+      when: ansible_os_family == "Debian"
+
+    - name: Install unzip on RedHat
+      yum:
+name: unzip
+        state: present
+      when: ansible_os_family == "RedHat"
+
+    - name: Ensure web root exists
+      file:
+        path: "{{ web_root }}"
+        state: directory
+
+    - name: Copy sample project zip to managed node
+      copy:
+        src: "{{ local_project_zip }}"
+        dest: "{{ remote_project_zip }}"
+
+    - name: Extract sample project to web root
+      unarchive:
+        src: "{{ remote_project_zip }}"
+        dest: "{{ web_root }}"
+        remote_src: yes
+
+    - name: Ensure Nginx is running
+      service:
+        name: nginx
+        state: started
+        enabled: yes
+
+
+->ls ~/ansible_project/files/sample_project.zip
+->cd ~/ansible_project
+source venv_ansible/bin/activate
+ansible-playbook -i inventory playbooks/install_nginx_and_download.yml
+->http://<managed_node_ip>
+
+
+
+
+
+​2) Create a project folder containing an ansible.cfg, inventory file and playbooks folder. The
+inventory file should contain the details for three managed nodes. Then, establish and test
+the connection between the Ansible control node and the two managed nodes.
+ANSWER=>
+mkdir -p ~/ansible_project/playbooks
+cd ~/ansible_project
+
+nano ansible.cfg
+
+paste->
+[defaults]
+inventory = ./inventory
+remote_user = oem
+host_key_checking = False
+retry_files_enabled = False
+
+nano inventory
+paste->
+[webservers]
+127.0.0.1
+
+[dbservers]
+127.0.0.1
+
+cd playbooks
+nano test_playbook.yml
+
+paste->
+---
+- name: Test Ansible Playbook
+  hosts: all
+  tasks:
+    - name: Check uptime
+      command: uptime
+
+
+cd ~/ansible_project
+
+ansible-playbook playbooks/test_playbook.yml -u oem --connection=local
+
+oem in above cmd is remote user->to know this put cmd
+->
+whoami
+
