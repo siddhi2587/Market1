@@ -1,0 +1,134 @@
+ASS 1
+Q1.​ Create a Jenkins freestyle job to pull source code from a Git repository, build the project
+using Maven, and archive the generated artifact.​
+use git Repository: https://github.com/hkhcoder/vprofile-project.git​
+branch: main​
+Steps to include:
+●​ Create a new freestyle job.
+●​ Configure the Git repository in the "Source Code Management" section.
+●​ In the "Build" step, invoke the top-level Maven target (e.g., clean install).
+●​ Add a "Post-build Action" to archive the artifacts (e.g., target/*.war).
+
+ANSWER->
+Create a New Job->Click “New Item” (top left corner).->Enter job name → vprofile-build->Select “Freestyle project”->Click OK->Scroll to “Source Code Management”.->Select Git->In Repository URL, paste->https://github.com/hkhcoder/vprofile-project.git->in Branches to build, set:->(*/main)->Add Build Step – Maven->Scroll to the “Build” section.->Click Add build step → Invoke top-level Maven targets->In the Goals field, enter:(clean install
+)->In Maven Version, select the installed Maven (e.g., MAVEN_HOME)->Post-Build Action – Archive Artifacts->Scroll to the bottom → click Add post-build action->Select “Archive the artifacts”->In the field, type:(target/*.war)->Save and Build->Click Save->On the job page, click Build Now->then Console Output->BUILD SUCCESS
+
+
+
+
+
+
+
+2.)​ Build a Jenkins freestyle project that automates the following tasks for a Maven project:​
+use git Repository: https://github.com/hkhcoder/vprofile-project.git​
+branch: main
+●​ Pull the source code from the Git repository.
+●​ Build the project using Maven to generate a .war file.
+●​ Implement a strategy to version the .war file with the format projectname-build_id-
+time_stamp.war and store it in a separate versions directory.
+
+ANSWER->
+->Go to Jenkins Dashboard → New Item->Enter job name:(➤ vprofile-versioned-build)->Select Freestyle Project → Click OK->In Source Code Management, select Git->In Repository URL, enter:(https://github.com/hkhcoder/vprofile-project.git)->Set Branch Specifier:(*/main)->Scroll to Build section->Click Add build step → Invoke top-level Maven targets->Enter:(Goals: clean install)->In Maven Version, select the installed Maven (e.g., MAVEN_HOME)->Add Build Step to Version the WAR File->We’ll rename the .war file dynamically using Shell Script.->Click Add build step → Execute shell->Paste the following script:->(# Define variables
+PROJECT_NAME="vprofile"
+BUILD_ID=${BUILD_NUMBER}
+TIME_STAMP=$(date +%Y%m%d%H%M%S)
+TARGET_DIR="target"
+VERSIONS_DIR="/var/lib/jenkins/versions"
+
+# Create versions directory if it doesn't exist
+mkdir -p $VERSIONS_DIR
+
+# Locate the WAR file
+WAR_FILE=$(find $TARGET_DIR -name "*.war" | head -n 1)
+
+# Check if WAR file exists
+if [ -f "$WAR_FILE" ]; then
+    NEW_NAME="${PROJECT_NAME}-${BUILD_ID}-${TIME_STAMP}.war"
+    cp "$WAR_FILE" "$VERSIONS_DIR/$NEW_NAME"
+    echo "✅ WAR file versioned as: $NEW_NAME"
+    echo "📦 Stored at: $VERSIONS_DIR"
+else
+    echo "❌ No WAR file found in $TARGET_DIR"
+    exit 1
+fi
+)Scroll to Post-build Actions → Click Add post-build action → Archive the artifacts->Enter:(target/*.war)->Save and Build->Click Save->Then click Build Now
+
+
+3.)​ Schedule above job to run periodically every 5 minutes. (i.e. Q2)
+ANSWER->
+same as Q2 only add one thing ->go to jenkins dashboard->click your job-name->vprofile-versioned-build->click configure->scroll to triggers->click checkbox->(build periodically)
+->in schedule textbox->enter(H/5 * * * *)->save->build now-> console output->success
+
+4).​ Edit above job to notify users via email whenever there is an unstable build. (i.e. Q2)
+
+ANSWER=>
+Manage jenkins->systems>email notifications->SMTP server(smtp.gmail.com)->checked box use SMTP authentication->username(original mail of mine)->password->check box (use SSL)->also on same page ->you may see jenkins location->jenkins url(http://localhost:8080/)->system admin email address(mine original)->under extended email notification->SMTP server(smtp.example.com)->port 25->go at end and check box (test configuration by sending test email->under test email recipient->put your original mail->then click "Test Configuration"->mail must have received on phn
+
+HOW TO CREATE APP PASSWORD=>click on chrome->manage your google acc->security & sign in->2-step verification->this should be on->then go to "App Password"->Enter app name "jenkins"->create ->will create 16 chracter password->copy it ->REMEMBER(put this password without space between character in process when u put it)
+
+
+
+Q5) 5.​ Build a jenkins freestyle job that incorporates the following elements:
+●​ Pulls the latest code (The job should trigger automatically on code changes).
+●​ Builds the Docker image using a Dockerfile located in the repository.
+●​ Runs a container from the built image.
+●​ Push Build image to Docker Hub with proper tags.
+Note: use your own GitHub account, use any backend technology (e.g. nodejs, Django,
+Flask, etc...)
+
+ANSWER=>
+jenkins ->manage jenkins->credentials->system->global credentials(unrestricted)->add credential->kind(username & password)->username(siddhi5)->password(Siddhi555)
+->ID(dockerhub)->create
+new item-(docker-build-job1)>freestyle project->ok->SCM->git->repo url(https://github.com/siddhi2587/s1.git)->branch(main)->Triggers(Poll Scm)->Schedule(H/5 * * * *)->Environment(tick use secret text or file)->Add (username & password separated)->username(DOCKER_HUB_USERNAME)->pass(DOCKER_HUB_PASSWORD)->credentials->add your docker hub credentials you added on 1st step->Build steps(execute shell)->
+
+# Define Docker Hub username
+DOCKER_HUB_USERNAME="siddhi5"
+
+# Stop and remove any previous container if exists
+docker ps -q --filter "name=s1-container" | xargs -r docker stop
+docker ps -aq --filter "name=s1-container" | xargs -r docker rm
+
+# Login to Docker Hub securely using Jenkins credentials
+echo "$DOCKER_HUB_PASSWORD" | docker login -u "$DOCKER_HUB_USERNAME" --password-stdin
+
+# Build Docker image from the Dockerfile in the repository
+docker build -t $DOCKER_HUB_USERNAME/s1:latest .
+
+# Run container (optional test step)
+docker run -d --name s1-container -p 5000:5000 $DOCKER_HUB_USERNAME/s1:latest
+
+# Push the image to Docker Hub
+docker push $DOCKER_HUB_USERNAME/s1:latest
+
+
+
+save->build now
+
+Remember-Add file name called Dockerfile to your github repo containing following content
+FROM alpine:latest
+WORKDIR /app
+COPY . .
+CMD ["echo", "Docker build successful!"]
+
+
+NOTE-if after doing build now it says waiting for next available executor then do perform foll cmd on terminal and again say build now
+ 
+jenkins ->mnage jenkins->nodes->if showing disk space low then perform foll cmd:
+
+
+# Check disk usage
+df -h /var/lib/jenkins
+
+# Remove old Jenkins build workspaces
+sudo rm -rf /var/lib/jenkins/workspace/*
+
+# Remove old build logs (optional)
+sudo rm -rf /var/lib/jenkins/jobs/*/builds/*
+
+# Clean up Docker (these take lots of space)
+sudo docker system prune -af
+sudo docker volume prune -f
+
+df -h /var/lib/jenkins
+
+sudo systemctl restart jenkins
