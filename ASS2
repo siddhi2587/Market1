@@ -1,0 +1,244 @@
+
+ASSIGNMENT 2
+SET A
+Q1)1.​ Create a new Jenkins Pipeline job and configure it to use a Jenkinsfile with the following
+specifications:​
+use git Repository: https://github.com/hkhcoder/vprofile-project.git​
+branch: main
+A.​ Pipeline Configuration:
+●​ The pipeline must run on an agent with the label builtinubuntu.
+●​ It must specify the use of maven "maven 3.9.10" and jdk "openjdk 21.0.7"
+from the global tool configurations.
+B.​ Stage Implementation (in this specific order):
+●​ Stage 1: fetch code
+This stage should clone the specified Git repository and branch.
+●​ Stage 2: unit test
+This stage should compile the code and run all unit tests using the Maven
+command: sh 'mvn test'.
+Dept. of Comp. Sci., S. P. College, Pune
+​
+44●​ Stage 3: build the code
+This stage should package the application into a .war file without running the
+tests again. Use the command: sh 'mvn package -DskipTests'.
+●​ Stage 4: archive the artifact
+This stage should find and archive the generated .war file. Use the
+archiveArtifacts step to save **/*.war.
+●​ Stage 5: deploy to staging
+This stage should only run if all previous stages have succeeded.
+Simulate a deployment by printing a message to the console: echo
+'Deploying artifact to staging server.'.
+C.​ Failure Handling:
+●​ Implement a pipeline-level post block that triggers only on failure.
+●​ If any stage fails, the pipeline should execute a shell command to print the
+message: echo 'Build failed. Notifying the development team.'.
+
+
+jenkins->vprofile-pipeline->(select pipeline)->ok->pipeline->defination(pipeline script)->paste->
+
+pipeline {
+    agent { label 'builtinubuntu' }
+
+    tools {
+        maven 'maven 3.9.10'
+        jdk 'openjdk 21.0.7'
+    }
+
+    stages {
+        stage('fetch code') {
+            steps {
+                git branch: 'main', url: 'https://github.com/hkhcoder/vprofile-project.git'
+            }
+        }
+
+        stage('unit test') {
+            steps {
+                sh 'mvn test'
+            }
+        }
+
+        stage('build the code') {
+            steps {
+                sh 'mvn package -DskipTests'
+            }
+        }
+
+        stage('archive the artifact') {
+            steps {
+                archiveArtifacts artifacts: '**/*.war', fingerprint: true
+            }
+        }
+
+        stage('deploy to staging') {
+            when {
+                expression { currentBuild.resultIsBetterOrEqualTo('SUCCESS') }
+            }
+            steps {
+                echo 'Deploying artifact to staging server.'
+            }
+        }
+    }
+
+    post {
+        failure {
+            sh 'echo "Build failed. Notifying the development team."'
+        }
+    }
+}
+save->build now
+
+REMEMBER->after this go to manage jenkins->tols->global tool configuration->scroll to maven->add->name(maven 3.9.10)->tick box(install automatically)->then go to jdk->add->jdk name(openjdk 21.0.7)->jVA_HOME(/usr/lib/jvm/java-21-openjdk-amd64)->dont tick install automatically->save(version in script shell and in added jdk and maven should be same)
+
+/usr/lib/jvm/java-21-openjdk-amd64=to get this ->go to terminal put foll cmds->
+
+java -version
+sudo apt update
+sudo apt install openjdk-21-jdk -y
+update-alternatives --config java
+
+ALSO->go to manage jenkins->nodes->built in node->configure>labels->name(builtinubuntu)(this name comes from the code from line  agent { label 'builtinubuntu' })->save 
+
+
+
+Q2)
+2.​ Automate the process of building and testing a simple Node.js application using Jenkins
+Pipeline and Docker.Write a Jenkins Declarative Pipeline that performs the following tasks:​
+use GitHub repository: https://github.com/ajay-raut/spnodeserver.git​
+branch: main
+●​ Uses the agent builtin.
+●​ Fetches the application code from the GitHub repository:
+●​ Builds a Docker image named my-node-app.
+●​ Runs a container from the built image with the name nodeserver on port 5000.
+●​ Waits for 10 seconds and then stops and removes the container.
+●​ Displays the running containers list before stopping.
+●​ On pipeline failure, automatically sends an email notification to the developer at
+username@gmail.com with build details.
+
+
+jenkins->new item>NodeDockerPipeline->select pipeline option->ok->configure pipeline->defination->paste
+
+pipeline {
+    agent { label 'builtin' }
+
+    environment {
+        DOCKER_IMAGE = 'my-node-app'
+        CONTAINER_NAME = 'nodeserver'
+        GIT_REPO = 'https://github.com/ajay-raut/spnodeserver.git'
+        GIT_BRANCH = 'main'
+        DEVELOPER_EMAIL = 'username@gmail.com'
+    }
+
+    stages {
+
+        stage('Fetch Code') {
+            steps {
+                git branch: "${env.GIT_BRANCH}", url: "${env.GIT_REPO}"
+            }
+        }
+
+        stage('Build Docker Image') {
+            steps {
+                sh '''
+                    docker build -t ${DOCKER_IMAGE} .
+                '''
+            }
+        }
+
+        stage('Run Docker Container') {
+            steps {
+                sh '''
+                    # Remove existing container if exists
+                    docker rm -f ${CONTAINER_NAME} || true
+
+                    # Run new container
+                    docker run -d --name ${CONTAINER_NAME} -p 5000:5000 ${DOCKER_IMAGE}
+
+                    # Wait for container to start
+                    sleep 10
+                '''
+            }
+        }
+
+        stage('Show Running Containers') {
+            steps {
+                sh 'docker ps'
+            }
+        }
+
+        stage('Stop and Remove Container') {
+            steps {
+                sh '''
+                    docker stop ${CONTAINER_NAME}
+                    docker rm ${CONTAINER_NAME}
+                '''
+            }
+        }
+    }
+
+    post {
+        failure {
+            mail to: "${DEVELOPER_EMAIL}",
+                 subject: "Jenkins Build Failed: ${env.JOB_NAME} #${env.BUILD_NUMBER}",
+                 body: "Build failed. Check console output: ${env.BUILD_URL}"
+        }
+    }
+}
+
+save->build now
+
+ALSO->go to manage jenkins->nodes->built in node->configure>labels->name(builtin)(this name comes from the code from line   agent { label 'builtin' })->save 
+
+
+Q3)securely run a PostgreSQL container inside a Jenkins Declarative Pipeline.
+Write a Jenkins Pipeline with the following requirements:
+●​ Use the agent builtin.
+●​ In the pipeline, run a Docker container named some-postgres using the official
+postgres image.
+Dept. of Comp. Sci., S. P. College, Pune
+​
+45●​ The container should be started with an environment variable
+POSTGRES_PASSWORD, but the password must not be hardcoded in the pipeline.
+Instead:
+○​ Store the password in Jenkins credentials with ID postgres-password.
+○​ Use withCredentials to securely inject the password into the pipeline.
+●​ Ensure the container runs in detached mode (-d).
+
+ANSWER=>
+jenkins->manage jenkins->credentials->system->global->credentials->add credentials->Kind: Secret text->Secret: MyStrongPass123->ID: postgres-password->Description: Password for Postgres container->ok
+
+jenkins->new item->PostgresPipeline->select “Pipeline” as the job type->ok->configure pipeline->pipeline script ->paste->
+
+pipeline {
+    agent { label 'builtin' } // run on builtin agent
+
+    stages {
+        stage('Run Postgres') {
+            steps {
+                // Inject password securely from Jenkins credentials
+                withCredentials([string(credentialsId: 'postgres-password', variable: 'POSTGRES_PASSWORD')]) {
+                    sh '''
+                        # Remove existing container if it exists
+                        if [ $(docker ps -a -q -f name=some-postgres) ]; then
+                            docker rm -f some-postgres
+                        fi
+
+                        # Run Postgres container in detached mode
+                        docker run -d --name some-postgres -e POSTGRES_PASSWORD=$POSTGRES_PASSWORD postgres:latest
+                        
+                        # Show running containers
+                        docker ps
+                    '''
+                }
+            }
+        }
+    }
+
+    post {
+        failure {
+            echo 'Pipeline failed. Please check the logs.'
+        }
+    }
+}
+
+
+save->build now
+
