@@ -1,0 +1,1257 @@
+ASSINMENT 6
+
+1.​ Launch MLflow tracking server & also Configure the MLflow Tracking Client.
+ANSWER=>pip install mlflow
+->python3 --version
+->pip3 --version
+->sudo apt update
+->sudo apt install python3-pip
+->pip3 install mlflow --user
+->~/.local/bin
+->export PATH=$HOME:~/.local/bin
+export PATH=$HOME:~/.local/bin
+->mlflow --version
+->echo 'export PATH=$HOME:~/.local/bin' >> ~/.bashrc
+->source ~/.bashrc
+-> mlflow server \
+    --backend-store-uri sqlite:///mlflow.db \
+    --default-artifact-root ./mlruns \
+    --host 0.0.0.0 \
+    --port 5000
+->export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
+-> mkdir -p ~/mlflow_tracking/artifacts
+-> echo 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH' >> ~/.bashrc
+->source ~/.bashrc
+->mkdir -p ~/mlflow_tracking/test
+-> ls ~/mlflow_tracking
+-> mlflow server \
+    --backend-store-uri sqlite:///mlflow.db \
+    --default-artifact-root ./mlruns \
+    --host 0.0.0.0 \
+    --port 5000
+
+after this u will get url (http://0.0.0.0:5000) like this and will see mlflow page
+then 
+
+open another tab in terminal
+->nano test_mlflow.py
+paste->
+import mlflow
+
+# Set MLflow tracking server URI
+mlflow.set_tracking_uri("http://localhost:5000")
+
+# Confirm
+print("Tracking URI:", mlflow.get_tracking_uri())
+
+-> python3 test_mlflow.py
+-> python3
+
+if above cmds dont run try below one
+
+->export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH
+->python3 --version
+nano --version
+->echo 'export PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin:$PATH' >> ~/.bashrc
+source ~/.bashrc
+->python3 test_mlflow.py
+
+output->Tracking URI: http://localhost:5000
+
+
+2)​ Search experiments and view the metadata associated with the Experiments that are on the
+server
+ANSWER=>
+on terminal 1
+->python3 --version
+->mlflow --version
+->mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 0.0.0.0 --port 5000
+
+on terminal 2
+if after running above cmd it shows port 5000 already in use then perfrom foll on new terminal
+
+->sudo lsof -i :5000
+->sudo kill -9 137679 142692 142693 142694 142695(nos are PID s)
+->sudo lsof -i :5000
+
+return to terminal 1
+->sudo lsof -i :5000
+-> mlflow server --backend-store-uri sqlite:///mlflow.db --default-artifact-root ./mlruns --host 0.0.0.0 --port 5000
+
+take again terminal 3
+->export MLFLOW_TRACKING_URI=http://localhost:5000
+-> echo $MLFLOW_TRACKING_URI
+-> python3
+
+
+->paste below code 
+import mlflow
+
+# Set tracking URI
+mlflow.set_tracking_uri("http://localhost:5000")
+
+# Create MLflow client
+client = mlflow.tracking.MlflowClient()
+
+# Search all experiments
+experiments = client.search_experiments()
+
+# Print metadata
+for exp in experiments:
+    print(f"Experiment ID: {exp.experiment_id}")
+    print(f"Name: {exp.name}")
+    print(f"Artifact Location: {exp.artifact_location}")
+    print(f"Lifecycle Stage: {exp.lifecycle_stage}")
+    print(f"Creation Time: {exp.creation_time}")
+    print(f"Last Update Time: {exp.last_update_time}")
+    print(f"Tags: {exp.tags}")
+    print("-"*50)
+
+->Output: all experiments and metadata printed in terminal
+
+
+->paste
+exp_id = "0"  # Default experiment
+
+# Search all runs in this experiment
+runs = client.search_runs([exp_id])
+
+if not runs:
+    print("No runs found in this experiment.")
+else:
+    for run in runs:
+        print(f"Run ID: {run.info.run_id}, Status: {run.info.status}, Start Time: {run.info.start_time}")
+
+
+paste->
+import mlflow
+
+# Set tracking URI
+mlflow.set_tracking_uri("http://localhost:5000")
+
+# Start a new run
+with mlflow.start_run(experiment_id="0") as run:
+    # Log some parameters
+    mlflow.log_param("param1", 10)
+    mlflow.log_param("param2", 20)
+    
+    # Log some metrics
+    mlflow.log_metric("accuracy", 0.95)
+    mlflow.log_metric("loss", 0.05)
+    
+    run_id = run.info.run_id
+    print(f"New run created with ID: {run_id}")
+
+paste-># Search all runs in Default experiment
+runs = client.search_runs(["0"])
+
+for run in runs:
+    print(f"Run ID: {run.info.run_id}")
+    print(f"Status: {run.info.status}")
+    print(f"Start Time: {run.info.start_time}")
+    print(f"Parameters: {run.data.params}")
+    print(f"Metrics: {run.data.metrics}")
+    print("-"*50)
+
+
+
+3.)​ Display default experiment name and life cycle stage.
+
+->python3
+paste->
+import mlflow
+
+# Set MLflow tracking URI
+mlflow.set_tracking_uri("http://localhost:5000")
+
+# Create MLflow client
+client = mlflow.tracking.MlflowClient()
+
+# Get default experiment (ID = 0)
+default_exp = client.get_experiment("0")
+
+# Display name and lifecycle stage
+print(f"Default Experiment Name: {default_exp.name}")
+print(f"Lifecycle Stage: {default_exp.lifecycle_stage}")
+
+
+
+✅ Expected output:
+Default Experiment Name: Default
+Lifecycle Stage: active
+
+
+4).​ Create apples experiment with meaningful tags & Use search_experiments() to search on
+the project_name tag key.
+
+->python3
+->paste
+import mlflow
+
+# Set tracking URI
+mlflow.set_tracking_uri("http://localhost:5000")
+
+# Create MLflow client
+client = mlflow.tracking.MlflowClient()
+
+# Create a new experiment called "apples" with tags
+experiment_name = "apples"
+tags = {"project_name": "FruitAnalysis", "owner": "Siddhi", "purpose": "ML tracking"}
+
+# Create experiment
+experiment_id = client.create_experiment(name=experiment_name, tags=tags)
+
+print(f"Experiment '{experiment_name}' created with ID: {experiment_id}")
+
+
+✅ Expected output:Experiment 'apples' created with ID: 1   # (ID may differ)
+
+again paste below code
+
+paste->
+# Search for experiments where tag project_name = 'FruitAnalysis'
+experiments = client.search_experiments(filter_string="tags.project_name = 'FruitAnalysis'")
+
+# Print results
+for exp in experiments:
+    print(f"Experiment ID: {exp.experiment_id}")
+    print(f"Name: {exp.name}")
+    print(f"Artifact Location: {exp.artifact_location}")
+    print(f"Lifecycle Stage: {exp.lifecycle_stage}")
+    print(f"Tags: {exp.tags}")
+    print("-"*50)
+
+✅ Expected output:Experiment ID: 1
+Name: apples
+Artifact Location: /home/oem/mlruns/1
+Lifecycle Stage: active
+Tags: {'project_name': 'FruitAnalysis', 'owner': 'Siddhi', 'purpose': 'ML tracking'}
+--------------------------------------------------
+
+5.​ Generates a synthetic dataset for predicting apple sales demand with seasonality and
+inflation.
+->python3
+
+paste->
+import pandas as pd
+import numpy as np
+
+# Set random seed for reproducibility
+np.random.seed(42)
+
+# Generate dates for 3 years (daily)
+dates = pd.date_range(start="2023-01-01", end="2025-12-31", freq='D')
+
+# Base demand
+base_demand = 100
+
+# Seasonality: Assume sales higher in months 8-10 (summer) and lower in 1-2 (winter)
+seasonal_factor = [1.2 if m in [8,9,10] else 0.8 if m in [1,2] else 1.0 for m in dates.month]
+
+# Inflation effect: small daily increase over 3 years
+days = np.arange(len(dates))
+inflation_factor = 1 + (0.02 * days / len(dates))  # ~2% increase over 3 years
+
+# Random noise
+noise = np.random.normal(0, 5, len(dates))
+
+# Compute final demand
+demand = base_demand * np.array(seasonal_factor) * inflation_factor + noise
+
+# Create DataFrame
+df = pd.DataFrame({
+    "date": dates,
+    "apple_sales_demand": demand.round(0)  # round to integer
+})
+
+# Preview dataset
+print(df.head())
+print(df.tail())
+
+# Optionally, save to CSV
+df.to_csv("apple_sales_synthetic.csv", index=False)
+
+
+✅ Output (sample)
+
+        date  apple_sales_demand
+0 2023-01-01               77.0
+1 2023-01-02               78.0
+2 2023-01-03               78.0
+3 2023-01-04               76.0
+4 2023-01-05               79.0
+...
+
+
+
+
+6.​ Using MLflow Tracking Train and log the model.
+ANSWER=>
+->pip3 install pandas numpy scikit-learn mlflow
+->python3
+paste->
+import pandas as pd
+import numpy as np
+from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_squared_error
+import mlflow
+import mlflow.sklearn
+
+# Set MLflow tracking URI
+mlflow.set_tracking_uri("http://localhost:5000")
+
+# Set experiment (create or use existing 'apples' experiment)
+experiment_name = "apples"
+mlflow.set_experiment(experiment_name)
+
+# Load synthetic dataset
+df = pd.read_csv("apple_sales_synthetic.csv")
+
+# Feature engineering: create day_of_year to capture seasonality
+df['date'] = pd.to_datetime(df['date'])
+df['day_of_year'] = df['date'].dt.dayofyear
+
+# Features and target
+X = df[['day_of_year']].values
+y = df['apple_sales_demand'].values
+
+# Split data
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+
+# Start MLflow run
+with mlflow.start_run(run_name="LinearRegression_AppleSales") as run:
+    
+    # Train model
+    model = LinearRegression()
+    model.fit(X_train, y_train)
+    
+    # Predict
+    y_pred = model.predict(X_test)
+    
+    # Evaluate
+    mse = mean_squared_error(y_test, y_pred)
+    
+    # Log parameters
+    mlflow.log_param("model_type", "LinearRegression")
+    
+    # Log metrics
+    mlflow.log_metric("mse", mse)
+    
+    # Log model
+    mlflow.sklearn.log_model(model, artifact_path="apple_sales_model")
+    
+    # Print run info
+    print(f"Run ID: {run.info.run_id}")
+    print(f"MSE: {mse}")
+
+OUTPUT=>Run ID: 8f9a7c4b2d9e4a1b8c2f1234567890ab
+MSE: 10.5478
+
+Open your browser at:http://localhost:5000
+
+
+SET B
+1).​ Launch MLflow tracking server for Hyperparameter Tuning & Deployment.
+->pip install mlflow
+->mkdir -p ~/mlflow_tracking
+cd ~/mlflow_tracking
+->mlflow server \
+    --backend-store-uri sqlite:///mlflow.db \
+    --default-artifact-root ./artifacts \
+    --host 0.0.0.0 \
+    --port 5000
+->http://localhost:5000
+
+
+2.​ The Challenge: Wine Quality Prediction
+We'll optimize a neural network that predicts wine quality from chemical properties. Our
+goal is to minimize Root Mean Square Error (RMSE) by finding the optimal combination
+of:
+●​ Learning Rate: How aggressively the model learns
+●​ Momentum: How much the optimizer considers previous updates
+
+->sudo apt update
+sudo apt install -y build-essential \
+libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
+libsqlite3-dev wget curl llvm libncurses5-dev \
+libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev
+
+->cd ~/Python-3.11.8
+make clean
+./configure --prefix=$HOME/python311 --enable-optimizations
+make -j$(nproc)
+make install
+
+->$HOME/python311/bin/python3.11 -m ssl
+->export PATH=$HOME/python311/bin:$PATH
+python3.11 --version
+python3.11 -m venv ~/mlflow_env
+source ~/mlflow_env/bin/activate
+->pip install --upgrade pip
+pip install mlflow
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+->source ~/mlflow_env/bin/activate
+->pip install --upgrade pip
+pip install mlflow pandas numpy scikit-learn torch torchvision torchaudio
+->mlflow server \
+    --backend-store-uri sqlite:///mlflow.db \
+    --default-artifact-root ./artifacts \
+    --host 0.0.0.0 \
+    --port 5000
+->wget https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv
+
+->nano wine_mlflow.py
+->paste
+# ======================================
+# WINE QUALITY PREDICTION WITH RMSE TUNING + COLUMN CLEANUP
+# ======================================
+import pandas as pd
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error
+import math
+
+# ---- Load and clean dataset ----
+data = pd.read_csv("winequality-red.csv", sep=';')
+
+# Clean column names (remove spaces, lowercase)
+data.columns = data.columns.str.strip().str.lower()
+
+# Print columns (just to confirm once)
+print("Columns in dataset:", data.columns.tolist())
+
+# ---- Features and target ----
+X = data.drop("quality", axis=1).values
+y = data["quality"].values
+
+# ---- Split and scale ----
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+X_train_tensor = torch.FloatTensor(X_train)
+y_train_tensor = torch.FloatTensor(y_train).unsqueeze(1)
+X_test_tensor = torch.FloatTensor(X_test)
+y_test_tensor = torch.FloatTensor(y_test).unsqueeze(1)
+
+# ---- Neural network ----
+class WineNN(nn.Module):
+    def __init__(self, input_dim):
+        super(WineNN, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1)
+        )
+    def forward(self, x):
+        return self.net(x)
+
+# ---- Training + Evaluation ----
+def train_and_evaluate(lr, momentum):
+    model = WineNN(X_train.shape[1])
+    criterion = nn.MSELoss()
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+    
+    for epoch in range(200):
+        model.train()
+        optimizer.zero_grad()
+        outputs = model(X_train_tensor)
+        loss = criterion(outputs, y_train_tensor)
+        loss.backward()
+        optimizer.step()
+    
+    model.eval()
+    with torch.no_grad():
+        preds = model(X_test_tensor).numpy()
+        rmse = math.sqrt(mean_squared_error(y_test, preds))
+    return rmse
+
+# ---- Grid Search ----
+learning_rates = [0.001, 0.01, 0.05, 0.1]
+momentums = [0.5, 0.9, 0.99]
+
+best_rmse = float('inf')
+best_params = {}
+
+for lr in learning_rates:
+    for mom in momentums:
+        rmse = train_and_evaluate(lr, mom)
+        print(f"LR={lr}, Momentum={mom} --> RMSE={rmse:.4f}")
+        if rmse < best_rmse:
+            best_rmse = rmse
+            best_params = {'learning_rate': lr, 'momentum': mom}
+
+print("\n✅ Best Parameters Found:")
+print(best_params)
+print(f"✅ Lowest RMSE: {best_rmse:.4f}")
+
+->python3 wine_mlflow.py
+
+
+3.​) Step 1: Prepare Your Data
+->
+->sudo apt update
+sudo apt install -y build-essential \
+libssl-dev zlib1g-dev libbz2-dev libreadline-dev \
+libsqlite3-dev wget curl llvm libncurses5-dev \
+libncursesw5-dev xz-utils tk-dev libffi-dev liblzma-dev
+
+->cd ~/Python-3.11.8
+make clean
+./configure --prefix=$HOME/python311 --enable-optimizations
+make -j$(nproc)
+make install
+
+->$HOME/python311/bin/python3.11 -m ssl
+->export PATH=$HOME/python311/bin:$PATH
+python3.11 --version
+python3.11 -m venv ~/mlflow_env
+source ~/mlflow_env/bin/activate
+->pip install --upgrade pip
+pip install mlflow
+pip install torch torchvision torchaudio --index-url https://download.pytorch.org/whl/cpu
+
+->source ~/mlflow_env/bin/activate
+->pip install --upgrade pip
+pip install mlflow pandas numpy scikit-learn torch torchvision torchaudio
+->mlflow server \
+    --backend-store-uri sqlite:///mlflow.db \
+    --default-artifact-root ./artifacts \
+    --host 0.0.0.0 \
+    --port 5000
+->wget https://archive.ics.uci.edu/ml/machine-learning-databases/wine-quality/winequality-red.csv
+
+->source ~/mlflow_env/bin/activate
+->nano step1_prepare_data.py
+
+# ======================================
+# WINE QUALITY PREDICTION + SAVE + PREDICT
+# ======================================
+
+import pandas as pd
+import numpy as np
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error
+import math
+
+# ---- Load and clean dataset ----
+data = pd.read_csv("winequality-red.csv", sep=';')
+data.columns = data.columns.str.strip().str.lower()
+print("Columns in dataset:", data.columns.tolist())
+
+# ---- Features and target ----
+X = data.drop("quality", axis=1).values
+y = data["quality"].values
+
+# ---- Split and scale ----
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+X_train_tensor = torch.FloatTensor(X_train)
+y_train_tensor = torch.FloatTensor(y_train).unsqueeze(1)
+X_test_tensor = torch.FloatTensor(X_test)
+y_test_tensor = torch.FloatTensor(y_test).unsqueeze(1)
+
+# ---- Neural network ----
+class WineNN(nn.Module):
+    def __init__(self, input_dim):
+        super(WineNN, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1)
+        )
+    def forward(self, x):
+        return self.net(x)
+
+# ---- Training + Evaluation ----
+def train_and_evaluate(lr, momentum):
+    model = WineNN(X_train.shape[1])
+    criterion = nn.MSELoss()
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+    
+    for epoch in range(200):
+        model.train()
+        optimizer.zero_grad()
+        outputs = model(X_train_tensor)
+        loss = criterion(outputs, y_train_tensor)
+        loss.backward()
+        optimizer.step()
+    
+    model.eval()
+    with torch.no_grad():
+        preds = model(X_test_tensor).numpy()
+        rmse = math.sqrt(mean_squared_error(y_test, preds))
+    return model, rmse
+
+# ---- Grid Search ----
+learning_rates = [0.001, 0.01, 0.05, 0.1]
+momentums = [0.5, 0.9, 0.99]
+
+best_rmse = float('inf')
+best_params = {}
+best_model = None
+
+for lr in learning_rates:
+    for mom in momentums:
+        model, rmse = train_and_evaluate(lr, mom)
+        print(f"LR={lr}, Momentum={mom} --> RMSE={rmse:.4f}")
+        if rmse < best_rmse:
+            best_rmse = rmse
+            best_params = {'learning_rate': lr, 'momentum': mom}
+            best_model = model
+
+print("\n✅ Best Parameters Found:")
+print(best_params)
+print(f"✅ Lowest RMSE: {best_rmse:.4f}")
+
+# ---- Save best model ----
+torch.save(best_model.state_dict(), "best_wine_model.pth")
+print("✅ Best model saved as best_wine_model.pth")
+
+# ---- Predict on new data ----
+# Example new wine chemical properties (you can edit values)
+new_wine_data = np.array([[7.4, 0.7, 0.0, 1.9, 0.076, 11, 34, 0.9978, 3.51, 0.56, 9.4]])
+
+# Scale using the same scaler as training
+new_wine_scaled = scaler.transform(new_wine_data)
+new_wine_tensor = torch.FloatTensor(new_wine_scaled)
+
+# Load saved model for prediction
+loaded_model = WineNN(X_train.shape[1])
+loaded_model.load_state_dict(torch.load("best_wine_model.pth"))
+loaded_model.eval()
+
+# Make prediction
+with torch.no_grad():
+    predicted_quality = loaded_model(new_wine_tensor).item()
+
+print(f"\n🍷 Predicted wine quality for the new sample: {predicted_quality:.2f}")
+
+->python3 step1_prepare_data.py
+
+4.​ Step 2: Define Your Model Architecture
+
+->wine_quality_step2_define_model.py
+paste->
+# Step 2: Define Your Model Architecture
+import torch
+import torch.nn as nn
+
+# Define a simple Feedforward Neural Network
+class WineNN(nn.Module):
+    def __init__(self, input_dim):
+        super(WineNN, self).__init__()
+        
+        # Sequential model (layers stacked one after another)
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 64),  # Input layer → Hidden layer 1 (64 neurons)
+            nn.ReLU(),                 # Activation function
+            nn.Linear(64, 32),         # Hidden layer 1 → Hidden layer 2 (32 neurons)
+            nn.ReLU(),
+            nn.Linear(32, 1)           # Output layer (predicts wine quality)
+        )
+
+    def forward(self, x):
+        # Forward pass through all layers
+        return self.net(x)
+
+# Example: create model instance
+input_dim = 11  # there are 11 features in winequality dataset
+model = WineNN(input_dim)
+print(model)
+->python3 wine_quality_step2_define_model.py
+
+
+5.​ Step 3: Set Up Hyperparameter Optimization
+=>nano wine_quality_step3_hyperparameter_optimization.py
+paste->
+# Step 3: Set Up Hyperparameter Optimization
+import math
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from sklearn.metrics import mean_squared_error
+
+# ---- Neural Network Model (from Step 2) ----
+class WineNN(nn.Module):
+    def __init__(self, input_dim):
+        super(WineNN, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1)
+        )
+    def forward(self, x):
+        return self.net(x)
+
+# ---- Assume you already have training and test tensors ready ----
+# For demonstration, here’s how to make dummy data (replace with real data from Step 1)
+import numpy as np
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import pandas as pd
+
+# Load dataset
+data = pd.read_csv("winequality-red.csv", sep=';')
+data.columns = data.columns.str.strip().str.lower()
+
+X = data.drop("quality", axis=1).values
+y = data["quality"].values
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+X_train_tensor = torch.FloatTensor(X_train)
+y_train_tensor = torch.FloatTensor(y_train).unsqueeze(1)
+X_test_tensor = torch.FloatTensor(X_test)
+y_test_tensor = torch.FloatTensor(y_test).unsqueeze(1)
+
+# ---- Training + Evaluation function ----
+def train_and_evaluate(lr, momentum):
+    model = WineNN(input_dim=11)
+    criterion = nn.MSELoss()
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+
+    epochs = 200
+    for epoch in range(epochs):
+        model.train()
+        optimizer.zero_grad()
+        outputs = model(X_train_tensor)
+        loss = criterion(outputs, y_train_tensor)
+        loss.backward()
+        optimizer.step()
+
+    model.eval()
+    with torch.no_grad():
+        preds = model(X_test_tensor).numpy()
+        rmse = math.sqrt(mean_squared_error(y_test_tensor, preds))
+    return rmse
+
+# ---- Define hyperparameters ----
+learning_rates = [0.001, 0.01, 0.05, 0.1]
+momentums = [0.5, 0.9, 0.99]
+
+best_rmse = float('inf')
+best_params = {}
+
+# ---- Grid Search ----
+for lr in learning_rates:
+    for mom in momentums:
+        rmse = train_and_evaluate(lr, mom)
+        print(f"Learning Rate={lr}, Momentum={mom} --> RMSE={rmse:.4f}")
+        
+        if rmse < best_rmse:
+            best_rmse = rmse
+            best_params = {'learning_rate': lr, 'momentum': mom}
+
+print("\n✅ Best Parameters Found:")
+print(best_params)
+print(f"✅ Lowest RMSE: {best_rmse:.4f}")
+->python3 wine_quality_step3_hyperparameter_optimization.py
+
+6.​ Step 4: Run the Hyperparameter Optimization
+=>
+->nano wine_quality_step4_run_optimization.py
+paste->
+# Step 4: Run the Hyperparameter Optimization
+import math
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import pandas as pd
+import numpy as np
+
+# ---- Load and prepare dataset ----
+data = pd.read_csv("winequality-red.csv", sep=';')
+data.columns = data.columns.str.strip().str.lower()
+
+X = data.drop("quality", axis=1).values
+y = data["quality"].values
+
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+X_train_tensor = torch.FloatTensor(X_train)
+y_train_tensor = torch.FloatTensor(y_train).unsqueeze(1)
+X_test_tensor = torch.FloatTensor(X_test)
+y_test_tensor = torch.FloatTensor(y_test).unsqueeze(1)
+
+# ---- Define Model ----
+class WineNN(nn.Module):
+    def __init__(self, input_dim):
+        super(WineNN, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1)
+        )
+    def forward(self, x):
+        return self.net(x)
+
+# ---- Train & Evaluate ----
+def train_and_evaluate(lr, momentum):
+    model = WineNN(input_dim=11)
+    criterion = nn.MSELoss()
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+
+    for epoch in range(200):
+        model.train()
+        optimizer.zero_grad()
+        outputs = model(X_train_tensor)
+        loss = criterion(outputs, y_train_tensor)
+        loss.backward()
+        optimizer.step()
+
+    model.eval()
+    with torch.no_grad():
+        preds = model(X_test_tensor).numpy()
+        rmse = math.sqrt(mean_squared_error(y_test_tensor, preds))
+    return rmse
+
+# ---- Define Hyperparameter Grid ----
+learning_rates = [0.001, 0.01, 0.05, 0.1]
+momentums = [0.5, 0.9, 0.99]
+
+best_rmse = float('inf')
+best_params = {}
+
+# ---- Run Optimization ----
+print("🔍 Running Hyperparameter Optimization...\n")
+
+for lr in learning_rates:
+    for mom in momentums:
+        rmse = train_and_evaluate(lr, mom)
+        print(f"Learning Rate={lr}, Momentum={mom} --> RMSE={rmse:.4f}")
+        
+        if rmse < best_rmse:
+            best_rmse = rmse
+            best_params = {'learning_rate': lr, 'momentum': mom}
+
+# ---- Show Best Results ----
+print("\n✅ Hyperparameter Optimization Complete!")
+print(f"✅ Best Parameters: {best_params}")
+print(f"✅ Lowest RMSE: {best_rmse:.4f}")
+
+->python3 wine_quality_step4_run_optimization.py
+
+7.​ Step 5: Analyze Results in MLflow UI
+
+=>
+->mlflow server \
+  --backend-store-uri sqlite:///mlflow.db \
+  --default-artifact-root ./artifacts \
+  --host 0.0.0.0 \
+  --port 5000
+->source ~/mlflow_env/bin/activate
+->export MLFLOW_TRACKING_URI=http://localhost:5000
+->nano wine_quality_step5_mlflow_analysis.py
+paste->
+import math
+import torch
+import torch.nn as nn
+import torch.optim as optim
+from sklearn.metrics import mean_squared_error
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+import pandas as pd
+import mlflow
+import mlflow.pytorch
+
+# ✅ Tell MLflow where the tracking server is
+mlflow.set_tracking_uri("http://localhost:5000")
+
+# ---- Load and prepare dataset ----
+data = pd.read_csv("winequality-red.csv", sep=';')
+...
+
+
+->python3 wine_quality_step5_mlflow_analysis.py
+
+
+8).​ Step 6: Register Your Best Model
+->
+->nano wine_quality_step6_register_best_model.py
+paste->
+# ============================================
+# STEP 6: Register Your Best Model in MLflow
+# ============================================
+
+import math
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import mlflow
+import mlflow.pytorch
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error
+
+# -------------------------------------------------------
+# 1. CONNECT TO MLflow SERVER
+# -------------------------------------------------------
+mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_experiment("Wine_Quality_Optimization")
+
+# -------------------------------------------------------
+# 2. LOAD & PREPARE DATA
+# -------------------------------------------------------
+data = pd.read_csv("winequality-red.csv", sep=';')
+data.columns = data.columns.str.strip().str.lower()
+
+X = data.drop("quality", axis=1).values
+y = data["quality"].values
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+X_train_tensor = torch.FloatTensor(X_train)
+y_train_tensor = torch.FloatTensor(y_train).unsqueeze(1)
+X_test_tensor = torch.FloatTensor(X_test)
+y_test_tensor = torch.FloatTensor(y_test).unsqueeze(1)
+
+# -------------------------------------------------------
+# 3. DEFINE MODEL ARCHITECTURE
+# -------------------------------------------------------
+class WineNN(nn.Module):
+    def __init__(self, input_dim):
+        super(WineNN, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1)
+        )
+    def forward(self, x):
+        return self.net(x)
+
+# -------------------------------------------------------
+# 4. TRAIN + EVALUATE FUNCTION
+# -------------------------------------------------------
+def train_and_evaluate(lr, momentum):
+    model = WineNN(input_dim=11)
+    criterion = nn.MSELoss()
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+
+    for epoch in range(200):
+        model.train()
+        optimizer.zero_grad()
+        outputs = model(X_train_tensor)
+        loss = criterion(outputs, y_train_tensor)
+        loss.backward()
+        optimizer.step()
+
+    model.eval()
+    with torch.no_grad():
+        preds = model(X_test_tensor).numpy()
+        rmse = math.sqrt(mean_squared_error(y_test, preds))
+
+    return model, rmse
+
+# -------------------------------------------------------
+# 5. HYPERPARAMETER SEARCH
+# -------------------------------------------------------
+learning_rates = [0.001, 0.01, 0.05, 0.1]
+momentums = [0.5, 0.9, 0.99]
+
+best_rmse = float('inf')
+best_params = None
+best_model = None
+
+print("\n🚀 Running experiments and registering best model...\n")
+
+for lr in learning_rates:
+    for mom in momentums:
+        with mlflow.start_run():
+            model, rmse = train_and_evaluate(lr, mom)
+
+            mlflow.log_param("learning_rate", lr)
+            mlflow.log_param("momentum", mom)
+            mlflow.log_metric("RMSE", rmse)
+
+            print(f"LR={lr}, Momentum={mom} --> RMSE={rmse:.4f}")
+
+            if rmse < best_rmse:
+                best_rmse = rmse
+                best_params = {"learning_rate": lr, "momentum": mom}
+                best_model = model
+
+# -------------------------------------------------------
+# 6. REGISTER THE BEST MODEL
+# -------------------------------------------------------
+print("\n🎯 Best Parameters:", best_params)
+print(f"🎯 Lowest RMSE: {best_rmse:.4f}")
+
+with mlflow.start_run(run_name="Best_Model_Registration"):
+    mlflow.log_params(best_params)
+    mlflow.log_metric("RMSE", best_rmse)
+
+    result = mlflow.pytorch.log_model(
+        pytorch_model=best_model,
+        artifact_path="best_model",
+        registered_model_name="WineQualityModel"
+    )
+
+print("\n🏆 Best model successfully registered!")
+print("📌 Model Name: WineQualityModel")
+print(f"📌 Version: {result.version}")
+print("📊 View in UI: http://localhost:5000/#/models/WineQualityModel\n")
+
+
+
+->python3 wine_quality_step6_register_best_model.py
+
+->Make sure:
+
+1️⃣ MLflow server is running
+2️⃣ Virtual environment is active
+3️⃣ Torch is installed (you already confirmed)
+
+
+
+SET C)
+1.​ Deploy Your Model Locally (Test your model with a REST API deployment).
+->
+
+->source ~/mlflow_env/bin/activate
+->mlflow server \
+    --backend-store-uri sqlite:///mlflow.db \
+    --default-artifact-root ./artifacts \
+    --host 0.0.0.0 \
+    --port 5000
+
+
+
+then open new terminal
+->source ~/mlflow_env/bin/activate
+->cd ~/Python-3.11.8
+
+paste->
+# ============================================
+# STEP 6: Register Your Best Model in MLflow
+# ============================================
+
+import math
+import torch
+import torch.nn as nn
+import torch.optim as optim
+import mlflow
+import mlflow.pytorch
+import pandas as pd
+from sklearn.model_selection import train_test_split
+from sklearn.preprocessing import StandardScaler
+from sklearn.metrics import mean_squared_error
+
+# -------------------------------------------------------
+# 1. CONNECT TO MLflow SERVER
+# -------------------------------------------------------
+mlflow.set_tracking_uri("http://localhost:5000")
+mlflow.set_experiment("/home/oem/Python-3.11.8/Wine_Quality_Optimization")
+
+# -------------------------------------------------------
+# 2. LOAD & PREPARE DATA
+# -------------------------------------------------------
+data = pd.read_csv("winequality-red.csv", sep=';')
+data.columns = data.columns.str.strip().str.lower()
+
+X = data.drop("quality", axis=1).values
+y = data["quality"].values
+
+X_train, X_test, y_train, y_test = train_test_split(
+    X, y, test_size=0.2, random_state=42
+)
+
+scaler = StandardScaler()
+X_train = scaler.fit_transform(X_train)
+X_test = scaler.transform(X_test)
+
+X_train_tensor = torch.FloatTensor(X_train)
+y_train_tensor = torch.FloatTensor(y_train).unsqueeze(1)
+X_test_tensor = torch.FloatTensor(X_test)
+y_test_tensor = torch.FloatTensor(y_test).unsqueeze(1)
+# -------------------------------------------------------
+# 3. DEFINE MODEL ARCHITECTURE
+# -------------------------------------------------------
+class WineNN(nn.Module):
+    def __init__(self, input_dim):
+        super(WineNN, self).__init__()
+        self.net = nn.Sequential(
+            nn.Linear(input_dim, 64),
+            nn.ReLU(),
+            nn.Linear(64, 32),
+            nn.ReLU(),
+            nn.Linear(32, 1)
+        )
+    def forward(self, x):
+        return self.net(x)
+
+# -------------------------------------------------------
+# 4. TRAIN + EVALUATE FUNCTION
+# -------------------------------------------------------
+def train_and_evaluate(lr, momentum):
+    model = WineNN(input_dim=11)
+    criterion = nn.MSELoss()
+    optimizer = optim.SGD(model.parameters(), lr=lr, momentum=momentum)
+
+    for epoch in range(200):
+        model.train()
+        optimizer.zero_grad()
+        outputs = model(X_train_tensor)
+        loss = criterion(outputs, y_train_tensor)
+        loss.backward()
+        optimizer.step()
+
+    model.eval()
+    with torch.no_grad():
+        preds = model(X_test_tensor).numpy()
+        rmse = math.sqrt(mean_squared_error(y_test, preds))
+
+    return model, rmse
+
+# -------------------------------------------------------
+# 5. HYPERPARAMETER SEARCH
+# -------------------------------------------------------
+learning_rates = [0.001, 0.01, 0.05, 0.1]
+momentums = [0.5, 0.9, 0.99]
+best_rmse = float('inf')
+best_params = None
+best_model = None
+
+print("\n🚀 Running experiments and registering best model...\n")
+
+for lr in learning_rates:
+    for mom in momentums:
+        with mlflow.start_run():
+            model, rmse = train_and_evaluate(lr, mom)
+
+            mlflow.log_param("learning_rate", lr)
+            mlflow.log_param("momentum", mom)
+            mlflow.log_metric("RMSE", rmse)
+
+            print(f"LR={lr}, Momentum={mom} --> RMSE={rmse:.4f}")
+
+            if rmse < best_rmse:
+                best_rmse = rmse
+                best_params = {"learning_rate": lr, "momentum": mom}
+                best_model = model
+
+# -------------------------------------------------------
+# 6. REGISTER THE BEST MODEL
+# -------------------------------------------------------
+print("\n🎯 Best Parameters:", best_params)
+print(f"🎯 Lowest RMSE: {best_rmse:.4f}")
+
+with mlflow.start_run(run_name="Best_Model_Registration"):
+    mlflow.log_params(best_params)
+    mlflow.log_metric("RMSE", best_rmse)
+
+    result = mlflow.pytorch.log_model(
+        pytorch_model=best_model,
+        artifact_path="best_model",
+        registered_model_name="WineQualityModel"
+    )
+
+print("\n🏆 Best model successfully registered!")
+print("📌 Model Name: WineQualityModel")
+print(f"📌 Version: {result.version}")
+print("📊 View in UI: http://localhost:5000/#/models/WineQualityModel\n")
+
+
+
+->python3 wine_quality_step6_register_best_model.py
+
+http://localhost:5000/#/models after above successfull cmd u will see output on this page
+
+
+
+
+
+
+
+2).​ Build Production Container (Create a Docker container for deployment and test it).
+
+->mkdir wine_model_docker
+cd wine_model_docker
+->wine_model/
+->nano Dockerfile
+
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install MLflow + CPU PyTorch + dependencies
+RUN pip install --no-cache-dir mlflow \
+    torch==2.9.1 torchvision torchaudio \
+    pandas numpy scikit-learn
+
+# Copy MLflow model
+COPY wine_model /app/model
+
+# Expose port
+EXPOSE 8001
+
+# Serve the model
+CMD ["mlflow", "models", "serve", "-m", "/app/model", "-p", "8001", "--no-conda"]
+
+docker build -t wine-model:latest .
+
+docker run -p 8001:8001 wine-model:latest
+
+->curl -X POST http://127.0.0.1:8001/invocations \
+  -H "Content-Type: application/json" \
+  -d '{"inputs": [[7.4, 0.70, 0.0, 1.9, 0.076, 11, 34, 0.9978, 3.51, 0.56, 9.4]]}'
+
+->docker ps
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
